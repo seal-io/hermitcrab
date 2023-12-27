@@ -1,0 +1,19 @@
+version: '3.6'
+
+services:
+  hermitcrab:
+    image: "sealio/hermitcrab:main"
+    restart: always
+    container_name: hermitcrab
+    command:
+      - "hermitcrab"
+      - "--log-debug"
+      - "--log-verbosity=4"
+    volumes:
+      - hermitcrab-data:/var/run/hermitcrab
+    ports:
+      - "80:80"
+      - "443:443"
+
+volumes:
+  hermitcrab-data: { }
