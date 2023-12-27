@@ -107,7 +107,6 @@ func (h *Handler) DownloadArchive(req DownloadArchiveRequest) (render.Render, er
 		Hostname:    req.Hostname,
 		Namespace:   req.Namespace,
 		Type:        req.Type,
-		Version:     req.Version,
 		Filename:    mr.Filename,
 		Shasum:      mr.Shasum,
 		DownloadURL: mr.DownloadURL,

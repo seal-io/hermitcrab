@@ -86,15 +86,25 @@ We can serve Hermit Crab by [Docker](https://www.docker.com/).
 docker run -d --restart=always -p 80:80 -p 443:443 sealio/hermitcrab
 ```
 
-Hermit Crab saves the mirroring packages in the `/var/lib/hermitcrab` directory by default, and we persist the mirroring packages by mounting a host path or a [Docker Volume](https://docs.docker.com/storage/volumes/).
+Hermit Crab saves the mirroring packages in the `/var/run/hermitcrab` directory by default, and we persist the mirroring packages by mounting a host path or a [Docker Volume](https://docs.docker.com/storage/volumes/).
 
 ```shell
 docker run -d --restart=always -p 80:80 -p 443:443 \
-  -v /tmp/hermitcrab:/var/lib/hermitcrab \
+  -v /tmp/hermitcrab:/var/run/hermitcrab \
   sealio/hermitcrab
 ```
 
-Hermit Crab can reuse the mirroring providers by [`terraform providers mirror`](https://developer.hashicorp.com/terraform/cli/commands/providers/mirror).
+Hermit Crab manages the archives as the following layer structure, which is absolutely compatible with the output of [`terraform providers mirror`](https://developer.hashicorp.com/terraform/cli/commands/providers/mirror).
+
+```
+/var/run/hermitcrab/data/providers
+├── /<HOSTNAME>
+│   ├── /<NAMESPACE>
+│   │   ├── /<TYPE>
+│   │   │   ├── terraform-provider-<TYPE>_<VERSION>_<OS>_<ARCH>.zip
+```
+
+Hermit Crab can reuse the mirroring providers by `terraform providers mirror` as well.
 
 ```shell
 terraform providers mirror /tmp/providers
@@ -150,7 +160,13 @@ Hermit Crab is not a [Terraform Registry](https://registry.terraform.io), althou
 
 Hermit Crab cannot mirror [Terraform Module](https://developer.hashicorp.com/terraform/internals/module-registry-protocol), since obtaining Terraform modules is diverse, like [Git](https://developer.hashicorp.com/terraform/language/modules/sources#generic-git-repository), [HTTP URLs](https://developer.hashicorp.com/terraform/language/modules/sources#http-urls), [S3 Bucket](https://developer.hashicorp.com/terraform/language/modules/sources#gcs-bucket) and so on, it's hard to provide a unified way to mirror them.
 
-Hermit Crab doesn't support rewriting the provider [hostname](https://developer.hashicorp.com/terraform/internals/provider-network-mirror-protocol#hostname), which is a rare case and may cause template/module reusing difficult. One possible scenario is that there is a private Terraform Registry in your network, and you need to use the community template/module without any modification.
+Hermit Crab doesn't support rewriting the provider [hostname](https://developer.hashicorp.com/terraform/internals/provider-network-mirror-protocol#hostname), which is a rare case and may make template/module reusing difficult. One possible scenario is that there is a private Terraform Registry in your network, and you need to use the community template/module without any modification.
+
+Hermit Crab automatically synchronizes the in-use versions per 30 minutes, if the information update occurs during sleep, we can manually trigger the synchronization by sending a `PUT` request to `/v1/providers/sync`.
+
+Hermit Crab only performs a checksum verification on the downloaded archives. For archives that already exist in the implied or explicit directory, checksum verification is not performed.
+
+Hermit Crab only allows downloading the archives whose name matches the [Terraform Release Rules](https://developer.hashicorp.com/terraform/registry/providers/publishing#manually-preparing-a-release), which means the archive name must be `terraform-provider-<TYPE>_<VERSION>_<OS>_<ARCH>.zip`.
 
 # License
 

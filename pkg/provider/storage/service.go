@@ -16,7 +16,6 @@ type (
 		Hostname    string
 		Namespace   string
 		Type        string
-		Version     string
 		Filename    string
 		Shasum      string
 		DownloadURL string
@@ -24,7 +23,14 @@ type (
 
 	Archive = runtime.ResponseFile
 
+	// Service holds the operation of provider storage.
+	// Takes a look of the filesystem layer structure:
+	// {hostname}
+	// └── {namespace}
+	//  └── {type}
+	//   └── terraform-provider-{type}_{version}_{os}_{arch}.zip
 	Service interface {
+		// LoadArchive loads the archive from the storage.
 		LoadArchive(context.Context, LoadArchiveOptions) (Archive, error)
 	}
 )
@@ -63,7 +69,6 @@ func (s *service) LoadArchive(ctx context.Context, opts LoadArchiveOptions) (Arc
 		p := filepath.Join(
 			s.impliedDir,
 			opts.Hostname, opts.Namespace, opts.Type,
-			opts.Version,
 			opts.Filename)
 
 		fi, err := os.Stat(p)
@@ -97,7 +102,7 @@ func (s *service) LoadArchive(ctx context.Context, opts LoadArchiveOptions) (Arc
 ExplicitDir:
 	// Check whether the archive is in the explicit directory.
 
-	d := filepath.Join(s.explicitDir, opts.Hostname, opts.Namespace, opts.Type, opts.Version)
+	d := filepath.Join(s.explicitDir, opts.Hostname, opts.Namespace, opts.Type)
 	p := filepath.Join(d, opts.Filename)
 
 	fi, err := os.Stat(p)
