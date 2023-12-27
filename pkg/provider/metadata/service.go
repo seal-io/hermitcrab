@@ -28,7 +28,9 @@ import (
 var (
 	ErrTypedNotFound       = errors.New("typed not found")
 	ErrVersionNotFound     = errors.New("version not found")
+	ErrVersionIncomplete   = errors.New("version incomplete")
 	ErrPlatformNotFound    = errors.New("platform not found")
+	ErrPlatformIncomplete  = errors.New("platform incomplete")
 	ErrPlatformsIncomplete = errors.New("platforms incomplete")
 )
 
@@ -199,6 +201,8 @@ func (s *service) Query(ctx context.Context, opts QueryOptions) ([]Version, erro
 		return nil, errors.New("invalid options")
 	}
 
+	logger := log.WithName("provider").WithName("metadata")
+
 	var queried []Version
 
 	err := s.boltDriver.View(func(tx *bolt.Tx) error {
@@ -209,6 +213,9 @@ func (s *service) Query(ctx context.Context, opts QueryOptions) ([]Version, erro
 			return ErrTypedNotFound
 		}
 
+		logger := logger.WithValues(
+			"hostname", opts.Hostname, "namespace", opts.Namespace, "type", opts.Type)
+
 		// Deep in one version.
 		if opts.Version != "" {
 			versionBucket := typedBucket.Bucket(toBytes(opts.Version))
@@ -216,10 +223,18 @@ func (s *service) Query(ctx context.Context, opts QueryOptions) ([]Version, erro
 				return ErrVersionNotFound
 			}
 
-			var version Version
+			data := bytes.Clone(versionBucket.Get(toBytes("data")))
+			if len(data) == 0 {
+				return ErrVersionIncomplete
+			}
 
-			err := json.Unmarshal(bytes.Clone(versionBucket.Get(toBytes("data"))), &version)
-			if err != nil {
+			logger := logger.WithValues(
+				"version", opts.Version)
+
+			var version Version
+			if err := json.Unmarshal(data, &version); err != nil {
+				logger.Warnf("malformed JSON string: %s", string(data))
+
 				return fmt.Errorf("error unmarshaling version: %w", err)
 			}
 
@@ -230,10 +245,16 @@ func (s *service) Query(ctx context.Context, opts QueryOptions) ([]Version, erro
 					return ErrPlatformNotFound
 				}
 
-				var platform Platform
+				data := bytes.Clone(platformBucket.Get(toBytes("data")))
+				if len(data) == 0 {
+					return ErrPlatformIncomplete
+				}
 
-				err = json.Unmarshal(bytes.Clone(platformBucket.Get(toBytes("data"))), &platform)
-				if err != nil {
+				var platform Platform
+				if err := json.Unmarshal(data, &platform); err != nil {
+					logger.WithValues("os", opts.OS, "arch", opts.Arch).
+						Warnf("malformed JSON string: %s", string(data))
+
 					return fmt.Errorf("error unmarshaling platform: %w", err)
 				}
 
@@ -255,10 +276,16 @@ func (s *service) Query(ctx context.Context, opts QueryOptions) ([]Version, erro
 					return ErrPlatformsIncomplete
 				}
 
-				var platform Platform
+				data := bytes.Clone(platformBucket.Get(toBytes("data")))
+				if len(data) == 0 {
+					return ErrPlatformIncomplete
+				}
 
-				err = json.Unmarshal(bytes.Clone(platformBucket.Get(toBytes("data"))), &platform)
-				if err != nil {
+				var platform Platform
+				if err := json.Unmarshal(data, &platform); err != nil {
+					logger.WithValues("os", opts.OS, "arch", opts.Arch).
+						Warnf("malformed JSON string: %s", string(data))
+
 					return fmt.Errorf("error unmarshaling platform: %w", err)
 				}
 
@@ -278,10 +305,16 @@ func (s *service) Query(ctx context.Context, opts QueryOptions) ([]Version, erro
 		err := typedBucket.ForEachBucket(func(versionBucketName []byte) error {
 			versionBucket := typedBucket.Bucket(versionBucketName)
 
-			var version Version
+			data := bytes.Clone(versionBucket.Get(toBytes("data")))
+			if len(data) == 0 {
+				return ErrVersionIncomplete
+			}
 
-			err := json.Unmarshal(bytes.Clone(versionBucket.Get(toBytes("data"))), &version)
-			if err != nil {
+			var version Version
+			if err := json.Unmarshal(data, &version); err != nil {
+				logger.WithValues("version", opts.Version).
+					Warnf("malformed JSON string: %s", string(data))
+
 				return fmt.Errorf("error unmarshaling version: %w", err)
 			}
 
@@ -415,6 +448,9 @@ func (s *service) isSyncing(k string) bool {
 }
 
 func (s *service) syncVersions(ctx context.Context, h, n, t string) error {
+	logger := log.WithName("provider").WithName("metadata").
+		WithValues("hostname", h, "namespace", n, "type", t)
+
 	key := path.Join(h, n, t)
 	if s.isSyncing(key) {
 		return nil
@@ -448,6 +484,10 @@ func (s *service) syncVersions(ctx context.Context, h, n, t string) error {
 		if len(versionsB) == 0 {
 			_ = typedBucket.Put(toBytes("modified"), toBytes(time.Now().Format(time.RFC3339)))
 
+			if !since.IsZero() {
+				logger.Debug("no new versions")
+			}
+
 			return nil
 		}
 
@@ -459,24 +499,26 @@ func (s *service) syncVersions(ctx context.Context, h, n, t string) error {
 				return true
 			}
 
-			var versionBucket *bolt.Bucket
+			err = func() error {
+				versionBucket, err := typedBucket.CreateBucketIfNotExists(toBytes(version))
+				if err != nil {
+					return fmt.Errorf("error creating version bucket: %w", err)
+				}
 
-			versionBucket, err = typedBucket.CreateBucketIfNotExists(toBytes(version))
+				err = versionBucket.Put(toBytes("data"), toBytes(versionJ.Raw))
+				if err != nil {
+					return fmt.Errorf("error putting version bucket: %w", err)
+				}
+
+				return nil
+			}()
 			if err != nil {
-				err = fmt.Errorf("error creating version bucket: %w", err)
 				return false
 			}
 
-			err = versionBucket.Put(toBytes("data"), toBytes(versionJ.Raw))
-			if err != nil {
-				err = fmt.Errorf("error putting version bucket: %w", err)
-			}
+			versions = append(versions, version)
 
-			if err == nil {
-				versions = append(versions, version)
-			}
-
-			return err == nil
+			return true
 		})
 
 		if err != nil {
@@ -511,10 +553,10 @@ func (s *service) syncVersions(ctx context.Context, h, n, t string) error {
 
 	// Sync latest platforms in background.
 	gopool.Go(func() {
-		logger := log.WithName("provider").WithName("metadata")
+		logger.Debug("syncing 5 newest versions in 5 mins")
 
-		if len(semvers) >= 10 {
-			semvers = semvers[:10]
+		if len(semvers) >= 5 {
+			semvers = semvers[:5]
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
@@ -526,6 +568,7 @@ func (s *service) syncVersions(ctx context.Context, h, n, t string) error {
 			}
 
 			version := semvers[i].String()
+			logger := logger.WithValues("version", version)
 
 			err := s.syncPlatforms(ctx,
 				h, n, t, version)
@@ -534,7 +577,7 @@ func (s *service) syncVersions(ctx context.Context, h, n, t string) error {
 				continue
 			}
 
-			logger.Debugf("synced platforms: %s/%s/%s/%s", h, n, t, version)
+			logger.V(4).Info("synced platforms")
 		}
 	})
 
@@ -542,6 +585,9 @@ func (s *service) syncVersions(ctx context.Context, h, n, t string) error {
 }
 
 func (s *service) syncPlatforms(ctx context.Context, h, n, t, v string) error {
+	logger := log.WithName("provider").WithName("metadata").
+		WithValues("hostname", h, "namespace", n, "type", t, "version", v)
+
 	key := path.Join(h, n, t, v)
 	if s.isSyncing(key) {
 		return nil
@@ -565,13 +611,20 @@ func (s *service) syncPlatforms(ctx context.Context, h, n, t, v string) error {
 			return nil
 		}
 
-		platformsJ := json.Get(bytes.Clone(versionBucket.Get(toBytes("data"))), "platforms")
+		data := bytes.Clone(versionBucket.Get(toBytes("data")))
+		if len(data) == 0 {
+			return nil
+		}
+
+		platformsJ := json.Get(data, "platforms")
 		platforms = make([][2]string, 0, int(platformsJ.Get("#").Int()))
 		platformsJ.ForEach(func(_, platformJ gjson.Result) bool {
-			platforms = append(platforms, [2]string{
-				platformJ.Get("os").String(),
-				platformJ.Get("arch").String(),
-			})
+			os := platformJ.Get("os").String()
+			arch := platformJ.Get("arch").String()
+
+			if os != "" && arch != "" {
+				platforms = append(platforms, [2]string{os, arch})
+			}
 
 			return true
 		})
@@ -592,14 +645,23 @@ func (s *service) syncPlatforms(ctx context.Context, h, n, t, v string) error {
 			platforms[i][0] == platforms[j][0] && platforms[i][1] < platforms[j][1]
 	})
 
-	wg := gopool.Group()
+	logger.DebugS("syncing platforms", "platforms", platforms)
+
+	wg := gopool.GroupWithContextIn(ctx)
 
 	for i := range platforms {
 		o, a := platforms[i][0], platforms[i][1]
 
-		wg.Go(func() error {
-			return s.syncPlatform(ctx,
+		wg.Go(func(ctx context.Context) error {
+			err := s.syncPlatform(ctx,
 				h, n, t, v, o, a)
+			if err != nil {
+				return err
+			}
+
+			logger.V(5).Infof("synced platform: %s/%s", o, a)
+
+			return nil
 		})
 	}
 
