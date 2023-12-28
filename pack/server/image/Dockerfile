@@ -33,4 +33,4 @@ COPY /image/ /
 COPY /build/server-${TARGETOS}-${TARGETARCH} /usr/bin/hermitcrab
 ENV _RUNNING_INSIDE_CONTAINER_="true" \
     TF_PLUGIN_MIRROR_DIR="/usr/share/terraform/providers/plugins"
-CMD ["hermitcrab", "--log-debug", "--log-verbosity=4"]
+CMD ["hermitcrab", "--log-debug", "--log-verbosity=5"]
