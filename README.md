@@ -107,10 +107,10 @@ Hermit Crab manages the archives as the following layer structure, which is abso
 Hermit Crab can reuse the mirroring providers by `terraform providers mirror` as well.
 
 ```shell
-terraform providers mirror /tmp/providers
+terraform providers mirror /tmp/providers-plugins
 
 docker run -d --restart=always -p 80:80 -p 443:443 \
-  -v /tmp/providers:/usr/share/terraform/providers \
+  -v /tmp/providers-plugins:/usr/share/terraform/providers/plugins \
   sealio/hermitcrab
 ```
 
@@ -143,6 +143,12 @@ Terraform Provider Network Mirror protocol wants [HTTPS](https://en.wikipedia.or
     -e SERVER_TLS_CERT_FILE=/etc/hermitcrab/ssl/cert.pem \
     sealio/hermitcrab
   ```
+
+Also support to launch from Helm Chart.
+
+```shell
+helm install my-release oci://ghcr.io/seal-io/helm-charts/hermitcrab
+```
 
 After setting up Hermit Crab, you can configure the [CLI Configuration](https://developer.hashicorp.com/terraform/cli/config/config-file) as below to use the mirroring service.
 
