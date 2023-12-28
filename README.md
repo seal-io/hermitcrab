@@ -147,9 +147,10 @@ Terraform Provider Network Mirror protocol wants [HTTPS](https://en.wikipedia.or
 Also support to launch from Helm Chart.
 
 ```shell
-helm install my-release oci://ghcr.io/seal-io/helm-charts/hermitcrab:<VERSION>
-# or
-helm install my-release oci://registry-1.docker.io/sealio/hermitcrab:<VERSION>
+# latest version
+helm install my-release oci://ghcr.io/seal-io/helm-charts/hermitcrab
+# with specific version
+helm install my-release oci://ghcr.io/seal-io/helm-charts/hermitcrab --version <VERSION>
 ```
 
 After setting up Hermit Crab, you can configure the [CLI Configuration](https://developer.hashicorp.com/terraform/cli/config/config-file) as below to use the mirroring service.
