@@ -52,10 +52,17 @@ type Provider url.URL
 
 // Provider switches the host to the provider endpoint.
 func (h Host) Provider(ctx context.Context) Provider {
-	if h == "registry.terraform.io" {
+	switch h {
+	case "registry.terraform.io":
 		return Provider(url.URL{
 			Scheme: "https",
 			Host:   "registry.terraform.io",
+			Path:   "/v1/providers/",
+		})
+	case "registry.opentofu.org":
+		return Provider(url.URL{
+			Scheme: "https",
+			Host:   "registry.opentofu.org",
 			Path:   "/v1/providers/",
 		})
 	}
