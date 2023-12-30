@@ -1,6 +1,6 @@
 # Hermit Crab 
 
-> tl;dr: Available Terraform Provider network mirroring service.
+> tl;dr: Available Terraform/OpenTofu Provider network mirroring service.
 
 [![](https://goreportcard.com/badge/github.com/seal-io/hermitcrab)](https://goreportcard.com/report/github.com/seal-io/hermitcrab)
 [![](https://img.shields.io/github/actions/workflow/status/seal-io/hermitcrab/ci.yml?label=ci)](https://github.com/seal-io/hermitcrab/actions)
@@ -8,7 +8,7 @@
 [![](https://img.shields.io/github/v/tag/seal-io/hermitcrab?label=release)](https://github.com/seal-io/hermitcrab/releases) 
 [![](https://img.shields.io/github/license/seal-io/hermitcrab?label=license)](https://github.com/seal-io/hermitcrab#license)
 
-Hermit Crab provides a stable and reliable [Terraform Provider](https://registry.terraform.io/browse/providers) network mirror service. 
+Hermit Crab provides a stable and reliable [Terraform](https://registry.terraform.io/browse/providers)/[OpenTofu](https://opentofu.org/registry/) Provider network mirror service. 
 
 This tool is maintained by [Seal](https://github.com/seal-io).
 
@@ -57,13 +57,13 @@ sequenceDiagram
 
 ## Background
 
-When we drive [Terraform](https://www.terraform.io/) at some automation scenarios, like CI, automatic deployment, etc., we need to download the Terraform Provider plugins from the Internet by `terraform init`. 
+When we drive [Terraform](https://www.terraform.io/) at some automation scenarios, like CI, automatic deployment, etc., we need to download the Provider plugins from the internet by `init` command. 
 
-However, depending on [Terraform Provider Registry Protocol](https://developer.hashicorp.com/terraform/internals/provider-registry-protocol), we may download a plugin that is not cached from an unstable networking remote.
+Depending on [Terraform Provider Registry Protocol](https://developer.hashicorp.com/terraform/internals/provider-registry-protocol), we may download a plugin that is not cached from an unstable networking remote.
 
-To migrate the effect of unstable networking, Terraform provides two ways to solve this: [Implied Mirroring](https://developer.hashicorp.com/terraform/cli/config/config-file#implied-local-mirror-directories) and [Network Mirroring](https://developer.hashicorp.com/terraform/cli/config/config-file#network_mirror).
+To mitigate the effect of unstable networking, there are two ways to solve this: [Implied Mirroring](https://developer.hashicorp.com/terraform/cli/config/config-file#implied-local-mirror-directories) and [Network Mirroring](https://developer.hashicorp.com/terraform/cli/config/config-file#network_mirror).
 
-As far as **Implied Mirroring** is concerned, it works well when Terraform Provider version matches the [Version Constraints](https://developer.hashicorp.com/terraform/language/expressions/version-constraints). However, this mode fails when the version is not cached in the local file directory.
+As far as **Implied Mirroring** is concerned, it works well when a Provider matches the [Version Constraints](https://developer.hashicorp.com/terraform/language/expressions/version-constraints). However, this mode fails when the version is not cached in the local file directory.
 
 ```
 ╷
@@ -78,15 +78,15 @@ What's even more troublesome is that if the version changes, we need to continuo
 
 ## Usage
 
-Hermit Crab implements the [Terraform Provider Network Mirror](https://developer.hashicorp.com/terraform/internals/provider-network-mirror-protocol) protocol, and acts as a mirroring service.
+Hermit Crab implements the [Terraform](https://developer.hashicorp.com/terraform/internals/provider-registry-protocol)/[OpenTofu](https://opentofu.org/docs/internals/provider-network-mirror-protocol/) Provider Registry Protocol and acts as a mirroring service.
 
-We can serve Hermit Crab by [Docker](https://www.docker.com/).
+Hermit Crab can be easily served through [Docker](https://www.docker.com/).
 
 ```shell
 docker run -d --restart=always -p 80:80 -p 443:443 sealio/hermitcrab
 ```
 
-Hermit Crab saves the mirroring packages in the `/var/run/hermitcrab` directory by default, and we persist the mirroring packages by mounting a host path or a [Docker Volume](https://docs.docker.com/storage/volumes/).
+Hermit Crab saves the mirrored(downloaded) packages in the `/var/run/hermitcrab` directory by default, which can be persisted by mounting a volume.
 
 ```shell
 docker run -d --restart=always -p 80:80 -p 443:443 \
@@ -94,7 +94,7 @@ docker run -d --restart=always -p 80:80 -p 443:443 \
   sealio/hermitcrab
 ```
 
-Hermit Crab manages the archives as the following layer structure, which is absolutely compatible with the output of [`terraform providers mirror`](https://developer.hashicorp.com/terraform/cli/commands/providers/mirror).
+Hermit Crab manages the archives as the following layer structure, which is absolutely compatible with the output of [`terraform providers mirror`](https://developer.hashicorp.com/terraform/cli/commands/providers/mirror)/[`tofu providers mirror`](https://opentofu.org/docs/cli/commands/providers/mirror).
 
 ```
 /var/run/hermitcrab/data/providers
@@ -104,7 +104,7 @@ Hermit Crab manages the archives as the following layer structure, which is abso
 │   │   │   ├── terraform-provider-<TYPE>_<VERSION>_<OS>_<ARCH>.zip
 ```
 
-Hermit Crab can reuse the mirroring providers by `terraform providers mirror` as well.
+Hermit Crab also can reuse the mirroring providers prepared by `terraform providers mirror`/`tofo providers mirror`.
 
 ```shell
 terraform providers mirror /tmp/providers-plugins
@@ -114,7 +114,7 @@ docker run -d --restart=always -p 80:80 -p 443:443 \
   sealio/hermitcrab
 ```
 
-Terraform Provider Network Mirror protocol wants [HTTPS](https://en.wikipedia.org/wiki/HTTPS) access, Hermit Crab provides multiple ways to achieve this.
+Terraform/OpenTofu Provider Network Mirror protocol wants [HTTPS](https://en.wikipedia.org/wiki/HTTPS) access, Hermit Crab provides multiple ways to achieve this.
 
 - Use the default self-signed certificate, no additional configuration is required.
 
@@ -153,7 +153,7 @@ helm install my-release oci://ghcr.io/seal-io/helm-charts/hermitcrab
 helm install my-release oci://ghcr.io/seal-io/helm-charts/hermitcrab --version <VERSION>
 ```
 
-After setting up Hermit Crab, you can configure the [CLI Configuration](https://developer.hashicorp.com/terraform/cli/config/config-file) as below to use the mirroring service.
+After setting up Hermit Crab, you can make the [Terraform](https://developer.hashicorp.com/terraform/cli/config/config-file)/[OpenTofu](https://opentofu.org/docs/cli/config/config-file/) CLI Configuration File as below to use the mirroring service.
 
 ```hcl
 provider_installation {
