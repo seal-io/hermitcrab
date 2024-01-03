@@ -295,6 +295,7 @@ func (r *Server) Run(c context.Context) error {
 	initOpts := initOptions{
 		ProviderService: providerService,
 		SkipTLSVerify:   len(r.TlsAutoCertDomains) != 0,
+		BoltDriver:      boltDriver,
 	}
 
 	if err := r.init(ctx, initOpts); err != nil {

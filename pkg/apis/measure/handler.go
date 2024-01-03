@@ -13,7 +13,7 @@ import (
 
 func Readyz() runtime.Handle {
 	return func(c *gin.Context) {
-		d, ok := health.MustValidate(c, []string{"k8sctrl", "casdoor"})
+		d, ok := health.MustValidate(c, []string{"database"})
 		if !ok {
 			c.String(http.StatusServiceUnavailable, d)
 			return
