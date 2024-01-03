@@ -72,4 +72,7 @@ type BoltDriver interface {
 
 	// IsReadOnly returns whether the database is opened in read-only mode.
 	IsReadOnly() bool
+
+	// Path returns the path to the file backing the database.
+	Path() string
 }

@@ -10,12 +10,14 @@ import (
 
 	"github.com/seal-io/walrus/utils/strs"
 
+	"github.com/seal-io/hermitcrab/pkg/database"
 	"github.com/seal-io/hermitcrab/pkg/provider"
 )
 
 type initOptions struct {
 	ProviderService *provider.Service
 	SkipTLSVerify   bool
+	BoltDriver      database.BoltDriver
 }
 
 func (r *Server) init(ctx context.Context, opts initOptions) error {
