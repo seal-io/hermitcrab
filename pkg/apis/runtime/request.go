@@ -1,15 +1,5 @@
 package runtime
 
-import (
-	"entgo.io/ent/dialect/sql"
-)
-
-// RequestCollection holds the requesting data of collection,
-// including querying, sorting, extracting and pagination.
-type RequestCollection[Q, S ~func(*sql.Selector)] struct {
-	RequestPagination `query:",inline"`
-}
-
 // RequestPagination holds the requesting pagination data.
 type RequestPagination struct {
 	// Page specifies the page number for querying,

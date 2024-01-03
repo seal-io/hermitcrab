@@ -5,7 +5,6 @@ go 1.21
 replace github.com/seal-io/walrus/utils => github.com/seal-io/walrus/staging/utils v0.0.0-20231219012953-e462fc8e68c5
 
 require (
-	entgo.io/ent v0.12.5
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/dustin/go-humanize v1.0.1
 	github.com/getkin/kin-openapi v0.118.0
