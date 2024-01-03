@@ -157,7 +157,7 @@ func (p Provider) GetVersions(ctx context.Context, namespace, type_ string, sinc
 //
 // If the given since is not zero, and the remote has not modified, the function returns nil, nil.
 //
-//nolint:lll
+// nolint:lll
 func (p Provider) GetPlatform(
 	ctx context.Context,
 	namespace, type_, version, os, arch string,
@@ -212,8 +212,6 @@ func (h Host) Module(ctx context.Context) Module {
 //	}
 //
 // If the given since is not zero, and the remote has not modified, the function returns nil, nil.
-//
-//nolint:lll
 func (m Module) GetVersions(ctx context.Context, namespace, name, system string, since ...time.Time) ([]byte, error) {
 	rq := httpCli.Request()
 	if len(since) != 0 && !since[0].IsZero() {
@@ -248,8 +246,6 @@ func (m Module) GetVersions(ctx context.Context, namespace, name, system string,
 //	}
 //
 // If the given since is not zero, and the remote has not modified, the function returns nil, nil.
-//
-//nolint:lll
 func (m Module) GetVersion(
 	ctx context.Context,
 	namespace, name, system, version string,
