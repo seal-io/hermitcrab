@@ -19,7 +19,7 @@ require (
 	github.com/urfave/cli/v2 v2.25.7
 	go.etcd.io/bbolt v1.3.8
 	go.uber.org/multierr v1.11.0
-	golang.org/x/crypto v0.14.0
+	golang.org/x/crypto v0.17.0
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
 	golang.org/x/time v0.3.0
 	k8s.io/apimachinery v0.28.4
