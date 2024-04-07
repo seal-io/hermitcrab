@@ -19,10 +19,13 @@ type Bolt struct {
 }
 
 // Run starts the BoltDB instance.
-func (b *Bolt) Run(ctx context.Context, dir string) (err error) {
+func (b *Bolt) Run(ctx context.Context, dir string, lockMemory bool) (err error) {
 	b.m.Lock()
 
-	b.db, err = bolt.Open(filepath.Join(dir, "metadata.db"), 0o600, getBoltOpts())
+	opts := getBoltOpts()
+	opts.Mlock = lockMemory
+
+	b.db, err = bolt.Open(filepath.Join(dir, "metadata.db"), 0o600, opts)
 	if err != nil {
 		b.m.Unlock()
 		return err

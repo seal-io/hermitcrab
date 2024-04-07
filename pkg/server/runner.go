@@ -42,7 +42,8 @@ type Server struct {
 	WebsocketConnMaxPerIP int
 	GopoolWorkerFactor    int
 
-	DataSourceDir string
+	DataSourceDir        string
+	DataSourceLockMemory bool
 }
 
 func New() *Server {
@@ -56,7 +57,8 @@ func New() *Server {
 		WebsocketConnMaxPerIP: 25,
 		GopoolWorkerFactor:    100,
 
-		DataSourceDir: filepath.Join(consts.DataDir, "data"),
+		DataSourceDir:        filepath.Join(consts.DataDir, "data"),
+		DataSourceLockMemory: false,
 	}
 }
 
@@ -209,6 +211,12 @@ func (r *Server) Flags(cmd *cli.Command) {
 			Destination: &r.DataSourceDir,
 			Value:       r.DataSourceDir,
 		},
+		&cli.BoolFlag{
+			Name:        "data-source-lock-memory",
+			Usage:       "Lock the data source files in memory, which can prevent potential page faults.",
+			Destination: &r.DataSourceLockMemory,
+			Value:       r.DataSourceLockMemory,
+		},
 	}
 	for i := range flags {
 		cmd.Flags = append(cmd.Flags, flags[i])
@@ -273,7 +281,7 @@ func (r *Server) Run(c context.Context) error {
 	g.Go(func() error {
 		log.Info("running database")
 
-		err := bolt.Run(ctx, r.DataSourceDir)
+		err := bolt.Run(ctx, r.DataSourceDir, r.DataSourceLockMemory)
 		if err != nil {
 			log.Errorf("error running database: %v", err)
 		}
