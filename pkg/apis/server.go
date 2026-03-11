@@ -137,16 +137,27 @@ func (s *Server) Serve(c context.Context, opts ServeOptions) error {
 			}
 			ls = tls.NewListener(ls, tlsConfig)
 			httpHandler <- mgr.HTTPHandler(http.HandlerFunc(redirectHandler))
-		case TlsModeCustomized:
-			s.logger.Info("serving in HTTPs with custom keypair")
+                case TlsModeCustomized:
+                        s.logger.Info("serving in HTTPs with custom keypair (with hot-reload support)")
 
-			cert, err := tls.LoadX509KeyPair(opts.TlsCertFile, opts.TlsPrivateKeyFile)
-			if err != nil {
-				return err
-			}
-			tlsConfig.Certificates = []tls.Certificate{cert}
-			ls = tls.NewListener(ls, tlsConfig)
-			httpHandler <- http.HandlerFunc(redirectHandler)
+                        // Initial check to fail fast if the certificates are invalid or missing
+                        _, err := tls.LoadX509KeyPair(opts.TlsCertFile, opts.TlsPrivateKeyFile)
+                        if err != nil {
+                                return fmt.Errorf("failed to load initial custom keypair: %w", err)
+                        }
+
+                        tlsConfig.GetCertificate = func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+                                cert, err := tls.LoadX509KeyPair(opts.TlsCertFile, opts.TlsPrivateKeyFile)
+                                if err != nil {
+                                        s.logger.Errorf("failed to reload custom keypair from %s and %s: %v", opts.TlsCertFile, opts.TlsPrivateKeyFile, err)
+                                        return nil, err
+                                }
+
+                                return &cert, nil
+                        }
+
+                        ls = tls.NewListener(ls, tlsConfig)
+                        httpHandler <- http.HandlerFunc(redirectHandler)
 		}
 
 		s.logger.Infof("serving https on %q by %q", addr, nw)
