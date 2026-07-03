@@ -104,7 +104,7 @@ Hermit Crab manages the archives as the following layer structure, which is abso
 │   │   │   ├── terraform-provider-<TYPE>_<VERSION>_<OS>_<ARCH>.zip
 ```
 
-Hermit Crab also can reuse the mirroring providers prepared by `terraform providers mirror`/`tofo providers mirror`.
+Hermit Crab also can reuse the mirroring providers prepared by `terraform providers mirror`/`tofu providers mirror`.
 
 ```shell
 terraform providers mirror /tmp/providers-plugins
